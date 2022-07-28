@@ -100,7 +100,7 @@ static struct argp argp = { Options, parse_opt, ArgsDoc, doc };
 int main( int argc, char *argv[] ){
 
     struct              Arguments arguments;
-    int                 verbose, UseTS07=0;
+    int                 verbose, UseTS07=0, UseTA16=0;
     char                IntModel[20], ExtModel[20], model_str[20];
     int                 i, j, k, sYear, sMonth, sDay, sDoy;
     int                 Year, Month, Day;
@@ -174,6 +174,9 @@ int main( int argc, char *argv[] ){
     } else if ( !strcmp( ExtModel, "TS07" ) ){
         mInfo->Bfield = Lgm_B_TS07;
         UseTS07=1;
+    } else if ( !strcmp( ExtModel, "TA16" ) ){
+        mInfo->Bfield = Lgm_B_TA16;
+        UseTA16=1;
     } else if ( !strcmp( ExtModel, "T89c" ) ){
         mInfo->Bfield = Lgm_B_T89c;
     } else if ( !strcmp( ExtModel, "T96" ) ){
@@ -223,10 +226,17 @@ int main( int argc, char *argv[] ){
         Date = Year*10000 + Month*100 + Day;
 
         Lgm_Set_Coord_Transforms(Date, UTC, mInfo->c);
-        Lgm_get_QinDenton_at_JD(JD, &qd, verbose , 0);  // Get (interpolate) the QinDenton vals
-                                                        // from the values in the file at the
-                                                        // given Julian Date.
-        Lgm_set_QinDenton(&qd, mInfo);                  // Set params in mInfo structure.
+        if ((UseTS07==0) && (UseTA16==0)) {
+            Lgm_get_QinDenton_at_JD(JD, &qd, verbose , 0);  // Get (interpolate) the QinDenton vals
+                                                            // from the values in the file at the
+                                                            // given Julian Date.
+            Lgm_set_QinDenton(&qd, mInfo);                  // Set params in mInfo structure.
+        } else if (UseTS07==1) {
+            Lgm_SetCoeffs_TS07( Date, UTC, &mInfo->TS07_Info );
+        } else if (UseTA16==1) {
+            Lgm_Init_TA16( &mInfo->TA16_Info, 0 );  // set to 1 to use verbose output
+            Lgm_SetCoeffs_TA16( Date, UTC, &mInfo->TA16_Info );
+        }
 
         // open output files
         sprintf(dirname, "%s_%ld", model_str, Date);
